@@ -1,171 +1,125 @@
-import java.util.ArrayList;
-import java.util.List;
-import java.util.Scanner;
+import employees.*;
+import utils.*;
 
-// ------------------------ ABSTRACTION -------------------------
-interface Workable {
-    void work();
-}
+import java.util.*;
+import java.util.concurrent.*;
 
-// ------------------------ BASE CLASS --------------------------
-class Employee implements Workable {
-    private static int idCounter = 1; // STATIC: shared among all employees
-    private int id;
-    private String name;
-    private double salary;
-
-    public Employee(String name, double salary) {
-        this.id = idCounter++;
-        this.name = name;
-        this.salary = salary;
-    }
-
-    // ENCAPSULATION: private fields with getters & setters
-    public int getId() { return id; }
-    public String getName() { return name; }
-    public void setName(String name) { this.name = name; }
-    public double getSalary() { return salary; }
-    public void setSalary(double salary) { this.salary = salary; }
-
-    // POLYMORPHISM: can be overridden
-    public void displayInfo() {
-        System.out.println("Employee [ID=" + id + ", Name=" + name + ", Salary=" + salary + "]");
-    }
-
-    // From interface
-    public void work() {
-        System.out.println(name + " is working...");
-    }
-
-    // Static method
-    public static void showTotalEmployees() {
-        System.out.println("Total employees so far: " + (idCounter - 1));
-    }
-}
-
-// ------------------------ INHERITANCE --------------------------
-class Manager extends Employee {
-    private int teamSize;
-
-    public Manager(String name, double salary, int teamSize) {
-        super(name, salary);
-        this.teamSize = teamSize;
-    }
-
-    @Override
-    public void displayInfo() {
-        System.out.println("Manager [ID=" + getId() + ", Name=" + getName() +
-                ", Salary=" + getSalary() + ", TeamSize=" + teamSize + "]");
-    }
-
-    @Override
-    public void work() {
-        System.out.println(getName() + " is managing a team of " + teamSize + " people.");
-    }
-
-    public void approveLeave() {
-        System.out.println(getName() + " approved a leave request.");
-    }
-}
-
-class Developer extends Employee {
-    private String programmingLanguage;
-
-    public Developer(String name, double salary, String programmingLanguage) {
-        super(name, salary);
-        this.programmingLanguage = programmingLanguage;
-    }
-
-    @Override
-    public void displayInfo() {
-        System.out.println("Developer [ID=" + getId() + ", Name=" + getName() +
-                ", Salary=" + getSalary() + ", Language=" + programmingLanguage + "]");
-    }
-
-    @Override
-    public void work() {
-        System.out.println(getName() + " is writing code in " + programmingLanguage + ".");
-    }
-
-    public void debugCode() {
-        System.out.println(getName() + " is debugging code.");
-    }
-}
-
-// ------------------------ MAIN APP --------------------------
 public class Main {
+
     private static List<Employee> employees = new ArrayList<>();
     private static Scanner scanner = new Scanner(System.in);
 
     public static void main(String[] args) {
+
         boolean running = true;
 
         while (running) {
             System.out.println("\n=== Employee Management System ===");
             System.out.println("1. Add Manager");
             System.out.println("2. Add Developer");
-            System.out.println("3. Show All Employees");
-            System.out.println("4. Make Employees Work");
-            System.out.println("5. Show Total Employees");
-            System.out.println("6. Exit");
+            System.out.println("3. Show Employees (sorted by ID)");
+            System.out.println("4. Sort by Name");
+            System.out.println("5. Sort by Salary");
+            System.out.println("6. Multithreaded Work (invokeAny)");
+            System.out.println("7. Exit");
             System.out.print("Enter choice: ");
 
-            int choice = scanner.nextInt();
-            scanner.nextLine(); // consume newline
+            int choice;
+
+            try {
+                choice = scanner.nextInt();
+            } catch (InputMismatchException e) {
+                System.out.println("Invalid input! Enter a number.");
+                scanner.nextLine();
+                continue;
+            }
+
+            scanner.nextLine(); // clear newline
 
             switch (choice) {
                 case 1 -> addManager();
                 case 2 -> addDeveloper();
                 case 3 -> showEmployees();
-                case 4 -> makeEmployeesWork();
-                case 5 -> Employee.showTotalEmployees();
-                case 6 -> running = false;
-                default -> System.out.println("Invalid choice, try again.");
+                case 4 -> sortByName();
+                case 5 -> sortBySalary();
+                case 6 -> runMultithreadWork();
+                case 7 -> running = false;
+                default -> System.out.println("Invalid choice.");
             }
         }
+
         System.out.println("Goodbye!");
     }
 
     private static void addManager() {
-        System.out.print("Enter Manager name: ");
-        String name = scanner.nextLine();
-        System.out.print("Enter salary: ");
-        double salary = scanner.nextDouble();
-        System.out.print("Enter team size: ");
-        int teamSize = scanner.nextInt();
-        employees.add(new Manager(name, salary, teamSize));
-        System.out.println("Manager added!");
+        try {
+            System.out.print("Enter Manager name: ");
+            String name = scanner.nextLine();
+            System.out.print("Enter salary: ");
+            double salary = scanner.nextDouble();
+            System.out.print("Team size: ");
+            int team = scanner.nextInt();
+            employees.add(new Manager(name, salary, team));
+            System.out.println("Manager added!");
+        } catch (Exception e) {
+            System.out.println("Error adding manager.");
+            scanner.nextLine();
+        }
     }
 
     private static void addDeveloper() {
-        System.out.print("Enter Developer name: ");
-        String name = scanner.nextLine();
-        System.out.print("Enter salary: ");
-        double salary = scanner.nextDouble();
-        scanner.nextLine(); // consume newline
-        System.out.print("Enter programming language: ");
-        String lang = scanner.nextLine();
-        employees.add(new Developer(name, salary, lang));
-        System.out.println("Developer added!");
+        try {
+            System.out.print("Enter Developer name: ");
+            String name = scanner.nextLine();
+            System.out.print("Enter salary: ");
+            double salary = scanner.nextDouble();
+            scanner.nextLine();
+            System.out.print("Language: ");
+            String lang = scanner.nextLine();
+            employees.add(new Developer(name, salary, lang));
+            System.out.println("Developer added!");
+        } catch (Exception e) {
+            System.out.println("Error adding developer.");
+        }
     }
 
     private static void showEmployees() {
-        if (employees.isEmpty()) {
-            System.out.println("No employees found.");
-        } else {
-            for (Employee e : employees) {
-                e.displayInfo(); // POLYMORPHISM in action
-            }
-        }
+        Collections.sort(employees); // uses Comparable
+        employees.forEach(Employee::displayInfo);
     }
 
-    private static void makeEmployeesWork() {
+    private static void sortByName() {
+        employees.sort(new EmployeeNamesComparator());
+        System.out.println("Sorted by name:");
+        showEmployees();
+    }
+
+    private static void sortBySalary() {
+        employees.sort(new EmployeesSalaryComparator());
+        System.out.println("Sorted by salary:");
+        showEmployees();
+    }
+
+    private static void runMultithreadWork() {
         if (employees.isEmpty()) {
-            System.out.println("No employees to work.");
-        } else {
-            for (Employee e : employees) {
-                e.work(); // Interface + Polymorphism in action
-            }
+            System.out.println("No employees to run.");
+            return;
         }
+
+        ExecutorService executor = Executors.newFixedThreadPool(3);
+        List<Callable<String>> tasks = new ArrayList<>();
+
+        for (Employee e : employees) {
+            tasks.add(new WorkerTask(e));
+        }
+
+        try {
+            String result = executor.invokeAny(tasks); // returns fastest thread
+            System.out.println("Fastest result: " + result);
+        } catch (Exception e) {
+            System.out.println("Error running threads.");
+        }
+
+        executor.shutdown();
     }
 }
