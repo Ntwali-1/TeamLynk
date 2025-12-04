@@ -1,16 +1,30 @@
 import employees.*;
 import utils.*;
 
-import java.util.*;
-import java.util.concurrent.*;
+import java.io.FileInputStream;
+import java.io.FileOutputStream;
+import java.io.ObjectInputStream;
+import java.io.ObjectOutputStream;
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.InputMismatchException;
+import java.util.List;
+import java.util.Scanner;
+import java.util.concurrent.Callable;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+import java.util.concurrent.Future;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 
 public class Main {
+
+    private static final String DATA_FILE = "employees.dat";
 
     private static List<Employee> employees = new ArrayList<>();
     private static Scanner scanner = new Scanner(System.in);
 
     public static void main(String[] args) {
-
 
         boolean running = true;
 
@@ -21,8 +35,11 @@ public class Main {
             System.out.println("3. Show Employees (sorted by ID)");
             System.out.println("4. Sort by Name");
             System.out.println("5. Sort by Salary");
-            System.out.println("6. Multithreaded Work (invokeAny)");
-            System.out.println("7. Exit");
+            System.out.println("6. Simulate Work (multithreading)");
+            System.out.println("7. Save Employees To File");
+            System.out.println("8. Load Employees From File");
+            System.out.println("9. Search Employees By Name (Regex)");
+            System.out.println("10. Exit");
             System.out.print("Enter choice: ");
 
             int choice;
@@ -35,7 +52,7 @@ public class Main {
                 continue;
             }
 
-            scanner.nextLine(); // clear newline
+            scanner.nextLine();
 
             switch (choice) {
                 case 1 -> addManager();
@@ -44,7 +61,10 @@ public class Main {
                 case 4 -> sortByName();
                 case 5 -> sortBySalary();
                 case 6 -> runMultithreadWork();
-                case 7 -> running = false;
+                case 7 -> saveEmployees();
+                case 8 -> loadEmployees();
+                case 9 -> searchEmployeesByNameRegex();
+                case 10 -> running = false;
                 default -> System.out.println("Invalid choice.");
             }
         }
@@ -52,50 +72,118 @@ public class Main {
         System.out.println("Goodbye!");
     }
 
+    private static String readNonEmptyLine(String label) {
+        while (true) {
+            System.out.print(label);
+            String value = scanner.nextLine().trim();
+            if (!value.isEmpty()) {
+                return value;
+            }
+            System.out.println("Value cannot be empty.");
+        }
+    }
+
+    private static String readValidatedName(String label) {
+        Pattern pattern = Pattern.compile("^[A-Za-z ]{2,40}$");
+        while (true) {
+            String name = readNonEmptyLine(label);
+            if (pattern.matcher(name).matches()) {
+                return name;
+            }
+            System.out.println("Name can only contain letters and spaces, and must be 2 to 40 characters long.");
+        }
+    }
+
+    private static String readValidatedLanguage(String label) {
+        Pattern pattern = Pattern.compile("^[A-Za-z+#]{2,20}$");
+        while (true) {
+            String language = readNonEmptyLine(label);
+            if (pattern.matcher(language).matches()) {
+                return language;
+            }
+            System.out.println("Language can only contain letters and characters like + or #.");
+        }
+    }
+
+    private static double readPositiveDouble(String label) {
+        while (true) {
+            System.out.print(label);
+            try {
+                double value = Double.parseDouble(scanner.nextLine());
+                if (value >= 0) {
+                    return value;
+                }
+                System.out.println("Value must be zero or positive.");
+            } catch (NumberFormatException ex) {
+                System.out.println("Enter a valid number.");
+            }
+        }
+    }
+
+    private static int readPositiveInt(String label) {
+        while (true) {
+            System.out.print(label);
+            try {
+                int value = Integer.parseInt(scanner.nextLine());
+                if (value >= 0) {
+                    return value;
+                }
+                System.out.println("Value must be zero or positive.");
+            } catch (NumberFormatException ex) {
+                System.out.println("Enter a valid integer.");
+            }
+        }
+    }
+
     private static void addManager() {
         try {
-            System.out.print("Enter Manager name: ");
-            String name = scanner.nextLine();
-            System.out.print("Enter salary: ");
-            double salary = scanner.nextDouble();
-            System.out.print("Team size: ");
-            int team = scanner.nextInt();
+            String name = readValidatedName("Enter Manager name: ");
+            double salary = readPositiveDouble("Enter salary: ");
+            int team = readPositiveInt("Team size: ");
             employees.add(new Manager(name, salary, team));
-            System.out.println("Manager added!");
+            System.out.println("Manager added.");
         } catch (Exception e) {
             System.out.println("Error adding manager.");
-            scanner.nextLine();
         }
     }
 
     private static void addDeveloper() {
         try {
-            System.out.print("Enter Developer name: ");
-            String name = scanner.nextLine();
-            System.out.print("Enter salary: ");
-            double salary = scanner.nextDouble();
-            scanner.nextLine();
-            System.out.print("Language: ");
-            String lang = scanner.nextLine();
+            String name = readValidatedName("Enter Developer name: ");
+            double salary = readPositiveDouble("Enter salary: ");
+            String lang = readValidatedLanguage("Language: ");
             employees.add(new Developer(name, salary, lang));
-            System.out.println("Developer added!");
+            System.out.println("Developer added.");
         } catch (Exception e) {
             System.out.println("Error adding developer.");
         }
     }
 
     private static void showEmployees() {
-        Collections.sort(employees); // uses Comparable
+        if (employees.isEmpty()) {
+            System.out.println("No employees.");
+            return;
+        }
+        Collections.sort(employees);
         employees.forEach(Employee::displayInfo);
+        Employee.showTotalEmployees();
     }
 
     private static void sortByName() {
+        if (employees.isEmpty()) {
+            System.out.println("No employees.");
+            return;
+        }
         employees.sort(new EmployeeNamesComparator());
         System.out.println("Sorted by name:");
         showEmployees();
     }
 
     private static void sortBySalary() {
+        if (employees.isEmpty()) {
+            System.out.println("No employees.");
+            return;
+        }
         employees.sort(new EmployeesSalaryComparator());
         System.out.println("Sorted by salary:");
         showEmployees();
@@ -107,7 +195,7 @@ public class Main {
             return;
         }
 
-        ExecutorService executor = Executors.newFixedThreadPool(3);
+        ExecutorService executor = Executors.newFixedThreadPool(Math.min(4, employees.size()));
         List<Callable<String>> tasks = new ArrayList<>();
 
         for (Employee e : employees) {
@@ -115,12 +203,79 @@ public class Main {
         }
 
         try {
-            String result = executor.invokeAny(tasks); // returns fastest thread
-            System.out.println("Fastest result: " + result);
-        } catch (Exception e) {
-            System.out.println("Error running threads.");
+            List<Future<String>> results = executor.invokeAll(tasks);
+            System.out.println("Results from background work:");
+            for (Future<String> future : results) {
+                try {
+                    System.out.println(future.get());
+                } catch (Exception ex) {
+                    System.out.println("Task failed.");
+                }
+            }
+        } catch (InterruptedException e) {
+            System.out.println("Execution interrupted.");
+            Thread.currentThread().interrupt();
+        } finally {
+            executor.shutdown();
         }
+    }
 
-        executor.shutdown();
+    private static void saveEmployees() {
+        if (employees.isEmpty()) {
+            System.out.println("No employees to save.");
+            return;
+        }
+        try (ObjectOutputStream out = new ObjectOutputStream(new FileOutputStream(DATA_FILE))) {
+            out.writeObject(new ArrayList<>(employees));
+            System.out.println("Employees saved to " + DATA_FILE);
+        } catch (Exception e) {
+            System.out.println("Error saving employees.");
+        }
+    }
+
+    private static void loadEmployees() {
+        try (ObjectInputStream in = new ObjectInputStream(new FileInputStream(DATA_FILE))) {
+            Object obj = in.readObject();
+            if (obj instanceof List) {
+                List<?> loaded = (List<?>) obj;
+                List<Employee> restored = new ArrayList<>();
+                for (Object o : loaded) {
+                    if (o instanceof Employee) {
+                        restored.add((Employee) o);
+                    }
+                }
+                employees = restored;
+                System.out.println("Employees loaded from " + DATA_FILE);
+            } else {
+                System.out.println("File did not contain a list of employees.");
+            }
+        } catch (Exception e) {
+            System.out.println("Error loading employees.");
+        }
+    }
+
+    private static void searchEmployeesByNameRegex() {
+        if (employees.isEmpty()) {
+            System.out.println("No employees.");
+            return;
+        }
+        System.out.print("Enter regex pattern for name search: ");
+        String patternText = scanner.nextLine();
+        try {
+            Pattern pattern = Pattern.compile(patternText, Pattern.CASE_INSENSITIVE);
+            boolean found = false;
+            for (Employee employee : employees) {
+                Matcher matcher = pattern.matcher(employee.getName());
+                if (matcher.find()) {
+                    employee.displayInfo();
+                    found = true;
+                }
+            }
+            if (!found) {
+                System.out.println("No employees matched the pattern.");
+            }
+        } catch (Exception e) {
+            System.out.println("Invalid regex pattern.");
+        }
     }
 }

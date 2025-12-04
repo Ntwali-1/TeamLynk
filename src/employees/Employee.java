@@ -2,7 +2,11 @@ package employees;
 
 import interfaces.Workable;
 
-public class Employee implements Workable, Comparable<Employee> {
+import java.io.Serializable;
+
+public class Employee implements Workable, Comparable<Employee>, Serializable {
+
+    private static final long serialVersionUID = 1L;
 
     private static int idCounter = 1;
     private int id;
@@ -42,7 +46,6 @@ public class Employee implements Workable, Comparable<Employee> {
         System.out.println("Total employees so far: " + (idCounter - 1));
     }
 
-    // Comparable → compare by ID
     @Override
     public int compareTo(Employee other) {
         return Integer.compare(this.id, other.id);

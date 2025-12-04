@@ -1,11 +1,13 @@
 package utils;
 
 import employees.Employee;
+
+import java.util.Random;
 import java.util.concurrent.Callable;
 
 public class WorkerTask implements Callable<String> {
 
-    private Employee employee;
+    private final Employee employee;
 
     public WorkerTask(Employee employee) {
         this.employee = employee;
@@ -13,6 +15,14 @@ public class WorkerTask implements Callable<String> {
 
     @Override
     public String call() {
-        return employee.getName() + " finished work on background thread!";
+        try {
+            int delay = new Random().nextInt(1000) + 500;
+            Thread.sleep(delay);
+            employee.work();
+            return employee.getName() + " completed work in " + delay + " ms on thread " + Thread.currentThread().getName();
+        } catch (InterruptedException e) {
+            Thread.currentThread().interrupt();
+            return employee.getName() + " was interrupted.";
+        }
     }
 }
