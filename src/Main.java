@@ -149,13 +149,57 @@ public class Main {
 
     private static void addDeveloper() {
         try {
+            // Check if there are any managers available
+            List<Manager> managers = getAvailableManagers();
+            if (managers.isEmpty()) {
+                System.out.println("No managers available. Please add a manager first.");
+                return;
+            }
+
             String name = readValidatedName("Enter Developer name: ");
             double salary = readPositiveDouble("Enter salary: ");
             String lang = readValidatedLanguage("Language: ");
-            employees.add(new Developer(name, salary, lang));
-            System.out.println("Developer added.");
+
+            // Display available managers
+            System.out.println("\nAvailable Managers:");
+            for (int i = 0; i < managers.size(); i++) {
+                System.out.println((i + 1) + ". " + managers.get(i).getName());
+            }
+
+            // Select a manager
+            int managerIndex = readManagerSelection("Select a manager (1-" + managers.size() + "): ", managers.size());
+            Manager selectedManager = managers.get(managerIndex - 1);
+
+            employees.add(new Developer(name, salary, lang, selectedManager));
+            System.out.println("Developer added with manager: " + selectedManager.getName());
         } catch (Exception e) {
-            System.out.println("Error adding developer.");
+            System.out.println("Error adding developer: " + e.getMessage());
+            e.printStackTrace();
+        }
+    }
+
+    private static List<Manager> getAvailableManagers() {
+        List<Manager> managers = new ArrayList<>();
+        for (Employee emp : employees) {
+            if (emp instanceof Manager) {
+                managers.add((Manager) emp);
+            }
+        }
+        return managers;
+    }
+
+    private static int readManagerSelection(String prompt, int maxValue) {
+        while (true) {
+            System.out.print(prompt);
+            try {
+                int value = Integer.parseInt(scanner.nextLine());
+                if (value >= 1 && value <= maxValue) {
+                    return value;
+                }
+                System.out.println("Please enter a number between 1 and " + maxValue + ".");
+            } catch (NumberFormatException ex) {
+                System.out.println("Enter a valid number.");
+            }
         }
     }
 
