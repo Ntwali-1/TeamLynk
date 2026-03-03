@@ -6,11 +6,12 @@ public class Developer extends Employee {
 
     private String programmingLanguage;
     private Manager manager;
-
+    private static int idCounter = 1;
     public Developer(String name, double salary, String programmingLanguage, Manager manager) {
         super(name, salary);
         this.programmingLanguage = programmingLanguage;
         this.manager = manager;
+        setId(idCounter++);
     }
 
     public Manager getManager() {
