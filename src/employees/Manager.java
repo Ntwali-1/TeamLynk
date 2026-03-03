@@ -3,6 +3,7 @@ package employees;
 public class Manager extends Employee {
 
     private int teamSize;
+    private static final long serialVersionUID = 1L;
 
     public Manager(String name, double salary, int teamSize) {
         super(name, salary);
